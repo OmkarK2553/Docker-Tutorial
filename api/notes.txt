@@ -1,0 +1,149 @@
+FROM node:17-alpine
+
+WORKDIR /app
+# all the further operations would have this as its root dir and the addresses specified would be relative to this
+
+COPY . .
+
+RUN npm install
+# at the build time ---> while creating the image
+# node app.js cannot be written like this as it'd require container to run
+
+EXPOSE 4000
+
+CMD ["node","app.js"]
+
+
+# id dockerignore isn't used for node modules, even if we perform npm install to install the latest versions of the dependencies,
+# they get replaced by the versions in the node modules that are copied in COPY . .
+# hence always use dokcerignore to ignore the node modules while copying
+
+
+
+# docker caches each layer at the time of build
+# so when some change is made, let's say in app.js i.e. the 3rd layer
+# the above two layers are retrieved from the cache
+# hence only the layer which is changed and the layers below it (as they're built on the top of this layer) have to be re-built which saves the time
+
+
+# but if the change is made only in the app.js, why run npm install needs to be re-built...can't it just be cached?
+# it'd need the package.json file copied to the directory first
+# so just copy the package.json file first, then run npm install and then copy the remaining files
+# hence npm install command will also be cached ---> reduces build time
+
+# initially
+FROM node:17-alpine
+
+WORKDIR /app
+
+COPY . .
+
+RUN npm install
+
+EXPOSE 4000
+
+CMD ["node","app.js"]
+
+
+# finally               --> before changing = 18.5s to build, after changing = 3.8s to build
+FROM node:17-alpine
+
+WORKDIR /app
+
+COPY package.json .
+
+RUN npm install
+
+COPY . .
+
+EXPOSE 4000
+
+CMD ["node","app.js"]
+
+# terminal
+[+] Building 3.8s (10/10) FINISHED
+ => [internal] load build definition from Dockerfile                                                                                        0.2s 
+ => => transferring dockerfile: 32B                                                                                                         0.0s 
+ => [internal] load .dockerignore                                                                                                           0.2s 
+ => => transferring context: 34B                                                                                                            0.0s 
+ => [internal] load metadata for docker.io/library/node:17-alpine                                                                           2.3s 
+ => [internal] load build context                                                                                                           0.1s 
+ => => transferring context: 653B                                                                                                           0.0s 
+ => [1/5] FROM docker.io/library/node:17-alpine@sha256:76e638eb0d73ac5f0b76d70df3ce1ddad941ac63595d44092b625e2cd557ddbf                     0.0s 
+ => CACHED [2/5] WORKDIR /app          -------------> cached                                                                                                     0.0s 
+ => CACHED [3/5] COPY package.json .                                                                                                        0.0s 
+ => CACHED [4/5] RUN npm install                                                                                                            0.0s
+ => [5/5] COPY . .                                                                                                                          0.2s 
+ => exporting to image                                                                                                                      0.4s 
+ => => exporting layers                                                                                                                     0.3s 
+ => => writing image sha256:f59d023330147c92646813d6a870a75d62a972d40bcd39e14887d04aaacef90c                                                0.0s 
+ => => naming to docker.io/library/mythirdapp  
+
+
+
+# deleting an image
+
+if an image has a container, it can't be deleted because that container would need that image under the hood
+hence -f flag i.e. force is added to delete them
+or first delete all the containers which that particular image has and then delete that image
+the images with no container can be deleted directly
+
+
+# giving tags to image to run or build a particular version
+
+we can specify the tag in front of the image/container name by adding the colon and then the version
+
+
+# volumes
+columes are the feature of docker that allow us to specify folders on out host computer that can be made available to run the containers
+we can map those folders on our host computer to specfic folders inside the container
+so if anything changes in those folders, those changes will also get mapped to the folders reflected in the container
+hence there is no need to re-build the image again and again
+NOTE - the image itself does not change ---> just the folder is mapped to the container
+if we've to share the image or create new containers, we need to re-build it
+
+so volumes are useful for testing and developing
+also even if the changes are made, they won't reflect before restarting the server
+hence nodemon is needed
+
+
+
+# in scripts nodemon -L app.js ---> -L is used for docker to properly use this command on windows
+
+but then node_modules folder will also get ignored if we delete it in our folder
+hence add another volume i.e. anonymous volume
+it is mapped to a folder in which docker persists in out computer
+
+
+# docker compose
+
+gives us a way to make a single docker compose file which contains all the container configurations (that we want to run simultaneously) of our projects such as port mappings, volumes, container names, etc
+one command to run docker compose to create all the images and run them to get the containers for each one
+it needs to be in root directory where all of our project folders are gonna be
+file = docker-compose.yaml
+
+structure :
+
+version:"3.8"   # of docker
+services:       
+    api:
+        build: ./api          # relative path of dockerfile ---> docker compose uses dockerfile to create an image
+        container_name: api_c
+        ports:                  # conains list with each entry starting with -
+            - '4000:4000'
+        volumes:                # conains list with each entry starting with -
+            - ./api:/app        # no need for an absolute path here
+            - ./app/node_modules
+# has multiple nested properties and values to tell docker how to build an image fot this service and also how to run the container for it
+# it is the projects that we want an image and container for
+
+
+
+# dockerizing react app
+
+same stuff
+but volumes don't run properly on windows so not specified
+two additional properties are specified
+stdin_open:true 
+tty:true
+used to start the container in interactive mode - oppo of detached mode

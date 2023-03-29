@@ -1,0 +1,39 @@
+BUILD - docker build -t myapp .
+-t for name, myapp = name, . = relative path for dockerfile
+
+LIST THE IMAGES - docker images
+
+LIST THE RUNNING CONATINERS - docker ps
+
+LIST ALL THE CONTAINERS - docker ps -a
+-a = all
+
+RUN (create a container) - docker run --name mycont -p 4000:4000 -d myapp
+docker run --name mycont -p 4000:4000 --rm -d myapp
+docker run --name mycont -p 4000:4000 --rm -v absolutePathOfOurFolder:PathOfFolderOnContainer -d myapp
+4000:4000 = port on localhost:port on docker, -d = detach the terminal
+--rm = to remove the container when it is stopped - not t permanently store it
+
+START (run a container) - docker start mycont
+docker start -i mycont ---> not to run in detached mode
+
+DELETE AN IMAGE - docker image rm myapp
+if image has containers - docker image rm myapp -f
+or delete all the containers it has and then delete this image
+
+DELETE A CONTAINER - docker container rm mycont
+for multiple, write the names space separated
+
+DELETE ALL THE IMAGES, CONTAINERS AND VOLUMES - docker system prune -a
+
+ADDING A TAG TO AN IMAGE - docker build -t myapp:v1 .
+
+RUNNING AN IMAGE WITH A PARTICULAR TAG - docker run --name mycont -p 4000:4000 myapp:v1
+
+ADD VOLUME TO CONTAINER - docker run --name mycont -p 4000:4000 --rm -v absolutePathOfOurFolder:PathOfFolderOnContainer -d myapp
+
+ADD VOLUME TO CONTAINER WITH NODE MODULES - docker run --name mycont -p 4000:4000 --rm -v absolutePathOfOurFolder:/app -v /app/node_modules -d myapp
+
+RUN DOCKER COMPOSE FILE - docker-compose up
+STOP AND DELETE THE CONTAINER - docker-compose down
+docker-compose --rmi all -v ---> to remove images and volumes too
